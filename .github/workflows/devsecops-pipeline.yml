@@ -1,0 +1,65 @@
+name: DevSecOps Basic Pipeline
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+
+jobs:
+  sast_semgrep:
+    name: Semgrep Code Scanning
+    runs-on: ubuntu-latest
+    container:
+      image: semgrep/semgrep
+    steps:
+      - name: Checkout del código
+        uses: actions/checkout@v4
+
+      - name: Ejecutar Semgrep CLI
+        run: semgrep scan --config=auto --json --output=semgrep-results.json
+
+      - name: Subir Reporte SAST
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: semgrep-sast-report
+          path: semgrep-results.json
+
+  sca_trivy:
+    name: Trivy Dependency Scanning
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout del código
+        uses: actions/checkout@v4
+
+      - name: Ejecutar Trivy en modo FS
+        uses: aquasecurity/trivy-action@master
+        with:
+          scan-type: 'fs'
+          scan-ref: '.'
+          format: 'table'
+          output: 'trivy-sca-report.txt'
+          severity: 'HIGH,CRITICAL'
+
+      - name: Subir Reporte SCA
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: trivy-sca-report
+          path: trivy-sca-report.txt
+
+  secret_leak_detection:
+    name: GitLeaks Scan
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout del código
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Ejecutar Gitleaks Action
+        uses: gitleaks/gitleaks-action@v2
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        continue-on-error: true
