@@ -28,26 +28,27 @@ jobs:
 
   sca_trivy:
     name: Trivy Dependency Scanning
-    runs-on: ubuntu-latest
-    steps:
-      - name: Checkout del código
-        uses: actions/checkout@v4
+        runs-on: ubuntu-latest
+        steps:
+          - name: Checkout del código
+            uses: actions/checkout@v4
 
-      - name: Ejecutar Trivy en modo FS
-        uses: aquasecurity/trivy-action@master
-        with:
-          scan-type: 'fs'
-          scan-ref: '.'
-          format: 'table'
-          output: 'trivy-sca-report.txt'
-          severity: 'HIGH,CRITICAL'
+          # Cambiamos de 'fs' a 'image' para que descargue y audite el contenedor vulnerable
+          - name: Ejecutar Trivy en modo Imagen de Contenedor
+            uses: aquasecurity/trivy-action@master
+            with:
+              image-ref: 'bkimminich/juice-shop:v16.0.0' # Apuntamos a la versión original para detectar los fallos iniciales
+              scan-type: 'image'
+              format: 'table'
+              output: 'trivy-sca-report.txt'
+              severity: 'HIGH,CRITICAL'
 
-      - name: Subir Reporte SCA
-        uses: actions/upload-artifact@v4
-        if: always()
-        with:
-          name: trivy-sca-report
-          path: trivy-sca-report.txt
+          - name: Subir Reporte SCA
+            uses: actions/upload-artifact@v4
+            if: always()
+            with:
+              name: trivy-sca-report
+              path: trivy-sca-report.txt
 
   secret_leak_detection:
     name: GitLeaks Scan
